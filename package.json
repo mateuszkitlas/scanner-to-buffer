@@ -1,6 +1,6 @@
 {
   "name": "scanner-to-buffer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "crossplatform scanning images",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https:/github.com/mateuszkitlas/scanner-to-buffer.git"
+    "url": "git+https://github.com/mateuszkitlas/scanner-to-buffer.git"
   },
   "keywords": ["scanner", "image", "tiff", "WIA"],
   "author": "mateusz.kitlas@gmail.com",
