@@ -1,0 +1,13 @@
+{
+  "name": "scanner-to-buffer",
+  "version": "1.0.0",
+  "description": "crossplatform scanning images",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "mateusz.kitlas@gmail.com",
+  "license": "ISC",
+  "dependencies": {
+  }
+}
