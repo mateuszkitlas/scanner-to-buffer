@@ -4,15 +4,32 @@ import type { Readable } from 'stream';
 export interface Options {
   dpi: number;
   format: 'png' | 'jpg' | 'tiff' | 'gif' | 'bmp';
+  timeout?: number;
 }
 
-const toBuffer = (proc: ChildProcessByStdio<null, Readable, Readable>) =>
-  new Promise<Buffer>((resolve) => {
-    const chunks: Buffer[] = [];
-    proc.stdout.on('data', (chunk) => chunks.push(chunk));
-    proc.on('close', (_code) => {
-      resolve(Buffer.concat(chunks));
+export const defaultTimeout = 60 * 1000;
+
+const toBuffer = (proc: ChildProcessByStdio<null, Readable, Readable>, timeout: number) =>
+  new Promise<Buffer>((resolve, reject) => {
+    const stdout: Buffer[] = [];
+    const stderr: Buffer[] = [];
+    proc.stdout.on('data', (chunk) => stdout.push(chunk));
+    proc.stderr.on('data', (chunk) => stderr.push(chunk));
+    const handler = timeout
+      ? setTimeout(() => {
+        proc.kill();
+        reject("timeout");
+      }, timeout)
+      : undefined;
+    proc.on('close', (code) => {
+      code === 0
+        ? resolve(Buffer.concat(stdout))
+        : reject(Buffer.concat(stderr).toString())
+      if (handler) {
+        clearTimeout(handler);
+      }
     });
+    
   });
 
 export const windows = (o: Options) => {
@@ -43,7 +60,7 @@ export const windows = (o: Options) => {
     [System.Console]::OpenStandardOutput().Write($bytes, 0, $bytes.Length)
   `;
   const proc = spawn(`powershell.exe`, ['-NoProfile', '-Command', `& {${ps}}`], { stdio: ['ignore', 'pipe', 'pipe'] });
-  return toBuffer(proc);
+  return toBuffer(proc, o.timeout || defaultTimeout);
 };
 
 export const linux = (o: Options) =>
@@ -51,6 +68,7 @@ export const linux = (o: Options) =>
     spawn('scanimage', ['--mode', 'Color', '--resolution', o.dpi.toString(), '--format', 'png'], {
       stdio: ['ignore', 'pipe', 'pipe'],
     }),
+    o.timeout || defaultTimeout,
   );
 
 export const scan = (o: Options) => {
