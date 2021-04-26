@@ -41,6 +41,7 @@ export const windows = (o: Options) => {
     tiff: '{B96B3CB1-0728-11D3-9D7B-0000F81EF32E}',
   }[o.format];
   const ps = `
+    $ErrorActionPreference = "Stop"
     $deviceManager = new-object -ComObject WIA.DeviceManager
     $device = $deviceManager.DeviceInfos.Item(1).Connect()
     foreach ($item in $device.Items) {
