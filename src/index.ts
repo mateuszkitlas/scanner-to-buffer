@@ -9,17 +9,17 @@ export interface Options {
 
 export const defaultTimeout = 60 * 1000;
 
-const toBuffer = (proc: ChildProcessByStdio<null, Readable, Readable>, timeout: number) =>
+const toBuffer = (proc: ChildProcessByStdio<null, Readable, Readable>, timeout?: number) =>
   new Promise<Buffer>((resolve, reject) => {
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
     proc.stdout.on('data', (chunk) => stdout.push(chunk));
     proc.stderr.on('data', (chunk) => stderr.push(chunk));
-    const handler = timeout
+    const handler = (timeout || defaultTimeout)
       ? setTimeout(() => {
         proc.kill();
         reject("timeout");
-      }, timeout)
+      }, (timeout || defaultTimeout))
       : undefined;
     proc.on('close', (code) => {
       code === 0
@@ -32,14 +32,11 @@ const toBuffer = (proc: ChildProcessByStdio<null, Readable, Readable>, timeout: 
     
   });
 
-export const windows = (o: Options) => {
-  const formatID = {
-    bmp: '{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}',
-    png: '{B96B3CAF-0728-11D3-9D7B-0000F81EF32E}',
-    gif: '{B96B3CB0-0728-11D3-9D7B-0000F81EF32E}',
-    jpg: '{B96B3CAE-0728-11D3-9D7B-0000F81EF32E}',
-    tiff: '{B96B3CB1-0728-11D3-9D7B-0000F81EF32E}',
-  }[o.format];
+const run = (cmd: string, ...args: string[]) => spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+
+const windowsScan = (o: Options) => {
+  const fid = (x: string) => `{B96B3C${x}-0728-11D3-9D7B-0000F81EF32E}`
+  const formatID = fid({ bmp: 'AB', png: 'AF', gif: 'B0', jpg: 'AE', tiff: 'B1' }[o.format]);
   const ps = `
     $ErrorActionPreference = "Stop"
     $deviceManager = new-object -ComObject WIA.DeviceManager
@@ -60,25 +57,39 @@ export const windows = (o: Options) => {
     $bytes = $image.FileData.BinaryData
     [System.Console]::OpenStandardOutput().Write($bytes, 0, $bytes.Length)
   `;
-  const proc = spawn(`powershell.exe`, ['-NoProfile', '-Command', `& {${ps}}`], { stdio: ['ignore', 'pipe', 'pipe'] });
-  return toBuffer(proc, o.timeout || defaultTimeout);
+  return toBuffer(
+    run("powershell.exe", '-NoProfile', '-Command', `& {${ps}}`),
+    o.timeout
+  );
 };
 
-export const linux = (o: Options) =>
+const linuxScan = (o: Options) =>
   toBuffer(
-    spawn('scanimage', ['--mode', 'Color', '--resolution', o.dpi.toString(), '--format', 'png'], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }),
-    o.timeout || defaultTimeout,
+    run('scanimage', '--mode', 'Color', '--resolution', o.dpi.toString(), '--format', 'png'),
+    o.timeout,
   );
 
 export const scan = (o: Options) => {
   switch (process.platform) {
     case 'win32':
-      return windows(o);
+      return windowsScan(o);
     case 'linux':
-      return linux(o);
+      return linuxScan(o);
     default:
       throw new Error(`not implemented for platform ${process.platform}`);
   }
 };
+
+const linuxList = async (timeout?: number) => {
+  const rawDevices = await toBuffer(run("scanimage", "-f", "%d%n"), timeout);
+  return rawDevices.toString().split("\n").filter(x => x);
+}
+
+export const list = (timeout?: number) => {
+  switch (process.platform) {
+    case 'linux':
+      return linuxList(timeout);
+    default:
+      throw new Error(`not implemented for platform ${process.platform}`);
+  }
+}
