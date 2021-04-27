@@ -1,6 +1,5 @@
 const { scan, list, Errors } = require("./lib/index");
 const { writeFileSync } = require("fs");
-const { assert } = require("console");
 
 const main = async () => {
   const devices = await list();
@@ -20,7 +19,15 @@ const main = async () => {
   try { // expect busy
     await Promise.all([scan({ format: "bmp", dpi: 75 }), scan({ format: "bmp", dpi: 75 })]);
   } catch(e) {
-    assert(e.code === Errors.busy.code)
+    if (e.code !== Errors.busy.code) {
+      console.error(e);
+    }
+  }
+  try {
+    const buffer = await scan({ format: "gif", dpi: 75 });
+    writeFileSync("deviceUndefined.gif", buffer);
+  } catch(e) {
+    console.error(e);
   }
 };
 
