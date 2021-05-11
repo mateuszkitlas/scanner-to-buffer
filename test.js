@@ -16,6 +16,13 @@ const main = async () => {
   } catch(e) {
     console.error(e);
   }
+  try {
+    await scan({ format: "bmp", dpi: 99 });
+  } catch(e) {
+    if (e.code !== Errors.invalidDPI.code) {
+      console.error(e);
+    }
+  }
   try { // expect busy
     await Promise.all([scan({ format: "bmp", dpi: 75 }), scan({ format: "bmp", dpi: 75 })]);
   } catch(e) {

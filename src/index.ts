@@ -19,6 +19,7 @@ export namespace Errors {
   export const busy = e("the device is busy", -3);
   export const noDevice = e("no device found", -4);
   export const windowsNoFormat = e("windows cannot recognize this format", -5);
+  export const invalidDPI = e("invalid DPI", -6);
 }
 export const defaultTimeout = 60 * 1000;
 
@@ -81,6 +82,9 @@ const windowsScan = async (o: Options) => {
       [System.Console]::OpenStandardOutput().Write($bytes, 0, $bytes.Length)
     `), o.timeout);
   } catch(err) {
+    if (typeof err === "string" && err.includes("At line:8 char:76") && err.includes("The parameter is incorrect.")) {
+      throw Errors.invalidDPI;
+    }
     if (typeof err === "string" && err.includes("At line:5") && err.includes("An unspecified error occurred during an attempted communication with the WIA device.")) {
       throw Errors.connect;
     } else if (typeof err === "string" && err.includes("At line:5") && err.includes("The WIA device is busy.")) {
