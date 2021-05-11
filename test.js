@@ -23,13 +23,15 @@ const main = async () => {
       console.error(e);
     }
   }
+  const s1 = scan({ format: "bmp", dpi: 75 });
   try { // expect busy
-    await Promise.all([scan({ format: "bmp", dpi: 75 }), scan({ format: "bmp", dpi: 75 })]);
+    await scan({ format: "bmp", dpi: 75 });
   } catch(e) {
     if (e.code !== Errors.busy.code) {
       console.error(e);
     }
   }
+  await s1;
   try {
     const buffer = await scan({ format: "gif", dpi: 75 });
     writeFileSync("deviceUndefined.gif", buffer);

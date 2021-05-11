@@ -45,6 +45,19 @@ const toBuffer = (proc: ChildProcessByStdio<null, Readable, Readable>, timeout?:
     });
   });
 
+const ife = (err: any, throwErr: Error, str1: string, str2 = "") => {
+  if (typeof err === "string" && err.includes(str1) && err.includes(str2)) {
+    throw throwErr;
+  }
+}
+const wrapErr = (err: any) => {
+  if (typeof err === "string") {
+    throw new Error(err);
+  } else {
+    throw err;
+  }
+}
+
 const run = (cmd: string, ...args: string[]) => spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] })
 
 const powershell = (data: string) => run("powershell.exe", '-NoProfile', '-Command', `& {${data}}`)
@@ -82,16 +95,10 @@ const windowsScan = async (o: Options) => {
       [System.Console]::OpenStandardOutput().Write($bytes, 0, $bytes.Length)
     `), o.timeout);
   } catch(err) {
-    if (typeof err === "string" && err.includes("At line:8 char:76") && err.includes("The parameter is incorrect.")) {
-      throw Errors.invalidDPI;
-    }
-    if (typeof err === "string" && err.includes("At line:5") && err.includes("An unspecified error occurred during an attempted communication with the WIA device.")) {
-      throw Errors.connect;
-    } else if (typeof err === "string" && err.includes("At line:5") && err.includes("The WIA device is busy.")) {
-      throw Errors.busy;
-    } else {
-      throw err;
-    }
+    ife(err, Errors.invalidDPI, "At line:8 char:76", "The parameter is incorrect.");
+    ife(err, Errors.connect, "At line:5", "An unspecified error occurred during an attempted communication with the WIA device.");
+    ife(err, Errors.busy, "At line:5", "The WIA device is busy.");
+    wrapErr(err);
   }
 };
 
@@ -103,13 +110,9 @@ const linuxScan = async (o: Options) => {
       o.timeout,
     );
   } catch(err) {
-    if (typeof err === "string" && err.includes("Error during device I/O")) {
-      throw Errors.busy;
-    } else if (typeof err === "string" && err.includes("no SANE devices found")) {
-      throw Errors.noDevice;
-    } else {
-      throw err;
-    }
+    ife(err, Errors.busy, "Error during device I/O");
+    ife(err, Errors.noDevice, "no SANE devices found");
+    wrapErr(err);
   }
 }
 
