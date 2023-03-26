@@ -2,3 +2,4 @@ node_modules
 lib
 *.bmp
 *.gif
+.vscode/settings.json
